@@ -1,0 +1,33 @@
+{
+    "name": "rojtjo/pstate",
+    "description": "State machine",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Roj Vroemen",
+            "email": "me@rojvroemen.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "PState\\": "src/"
+        },
+        "files": [
+            "src/pstate.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PState\\": "tests/"
+        }
+    },
+    "require": {
+        "php": "^8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.4",
+        "vimeo/psalm": "^4.2",
+        "symfony/var-dumper": "^5.1"
+    }
+}
