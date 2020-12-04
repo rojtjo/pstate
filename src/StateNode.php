@@ -4,57 +4,115 @@ declare(strict_types=1);
 
 namespace PState;
 
-/** @psalm-immutable */
-class StateNode
+/**
+ * @psalm-immutable
+ */
+final class StateNode
 {
-    /** @var string */
-    public string $id;
-    /** @var string|null */
-    public ?string $initial = null;
-    /** @var array<string, self>|null */
-    public ?array $states = null;
-    /** @var array<string, string>|null */
-    public ?array $on = null;
-    /** @var StateNode|null */
-    public ?StateNode $parent = null;
+    /**
+     * @var Path
+     */
+    public Path $key;
 
     /**
-     *
+     * @var Machine
      */
-    public function __construct(string $id, ?string $initial = null, ?array $states = null, ?array $on = null, ?self $parent = null)
+    public Machine $machine;
+
+    /**
+     * @var self|null
+     */
+    public ?self $parent;
+
+    /**
+     * @var string
+     */
+    public string $id;
+
+    /**
+     * @var string|null
+     */
+    public ?string $initial;
+
+    /**
+     * @var array<string, StateNode>|null
+     */
+    public ?array $states;
+
+    /**
+     * @var array<string, Transition>|null
+     */
+    public ?array $on;
+
+    /**
+     * @param StateConfig $config
+     * @param Machine $machine
+     * @param StateNode|null $parent
+     */
+    public function __construct(StateConfig $config, Machine $machine, ?self $parent = null)
     {
-        $this->id = $id;
-        $this->initial = $initial;
-        $this->states = $states ? create_states($states, $this) : null;
-        $this->on = $on;
         $this->parent = $parent;
+        $this->machine = $machine;
+        $this->id = $config->id;
+        $this->initial = $config->initial;
+        $this->on = $config->on;
+        $this->key = $parent?->key->concat($this->id) ?? Path::fromString($this->id);
+
+        $transitions = [];
+        if ($config->on) {
+            $transitions = [];
+            foreach ($config->on as $transition) {
+                $transitions[$transition->event] = new Transition($transition, $this->parent?->key);
+            }
+        }
+
+        $this->on = $transitions ?: null;
+
+        $states = [];
+        if ($config->states) {
+            $states = [];
+            foreach ($config->states as $state) {
+                $states[$state->id] = new StateNode($state, $machine, $this);
+            }
+        }
+
+        $this->states = $states ?: null;
     }
 
-    public function isMachine(): bool
+    /**
+     * @param string $event
+     * @return State
+     */
+    public function on(string $event): State
     {
-        return $this instanceof Machine;
+        $transition = $this->transition($event);
+
+        $nextState = $this->machine->state($transition->target);
+        if ($nextState->isLeaf()) {
+            return State::fromValue($transition->target->toValue());
+        }
+
+        $target = $nextState->key->concat($nextState->initial);
+
+        return State::fromValue($target->toValue());
     }
 
+    /**
+     * @return bool
+     */
     public function isLeaf(): bool
     {
-        return $this->initial === null && $this->states === null;
+        return $this->initial === null || $this->states === null;
     }
 
-    public function isComplex(): bool
+    private function transition(string $event): ?Transition
     {
-        return ! $this->isLeaf()
-            && ! $this->isMachine();
-    }
+        foreach ($this->on as $transition) {
+            if ($transition->event === $event) {
+                return $transition;
+            }
+        }
 
-    protected function transitions(): array
-    {
-        return array_merge(
-            $this->on ?? [],
-            $this->parent?->on ?? [],
-        );
-    }
-
-    public function path(): array
-    {
+        return $this->parent?->transition($event);
     }
 }

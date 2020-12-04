@@ -4,52 +4,72 @@ declare(strict_types=1);
 
 namespace PState;
 
-/** @psalm-immutable */
-final class Machine extends StateNode
+/**
+ * @psalm-immutable
+ */
+final class Machine
 {
-    public function transition(string $value, string $event): string
+    /**
+     * @var string
+     */
+    private string $id;
+
+    /**
+     * @var string
+     */
+    private string $initial;
+
+    /**
+     * @var array<string, StateNode>
+     */
+    private array $states;
+
+    /**
+     * @param MachineConfig $config
+     */
+    public function __construct(MachineConfig $config)
     {
-        $path = Path::fromString($value);
+        $this->id = $config->id;
+        $this->initial = $config->initial;
 
-        $current = $this->findStateNode($path);
-
-        $target = $this->findTransition($current, $event);
-
-        $next = $this->findStateNode($target);
-
-        $nextState = Path::fromRoot()->append($target->toString());
-        if ($next->isComplex()) {
-            $nextState = $nextState->append($next->initial);
+        $this->states = [];
+        foreach ($config->states as $state) {
+            $this->states[$state->id] = new StateNode($state, $this);
         }
-
-        return $nextState->toString();
     }
 
-    private function findStateNode(Path $path): StateNode
+    /**
+     * @param State $state
+     * @param string $event
+     * @return State
+     */
+    public function transition(State $state, string $event): State
     {
-        $node = $this;
+        foreach ($state->paths() as $path) {
+            $currentState = $this->state($path);
+
+            return $currentState->on($event);
+        }
+    }
+
+    /**
+     * @param Path $path
+     * @return StateNode
+     */
+    public function state(Path $path): StateNode
+    {
+        $currentState = null;
+        $states = $this->states;
         foreach ($path->toArray() as $part) {
-            $node = $node->states[$part] ?? null;
-
-            if ($node === null) {
-                throw new \RuntimeException("Invalid state: {$path->toString()}");
-            }
+            $currentState = $states[$part];
+            $states = $currentState->states;
         }
 
-        return $node;
+        return $currentState;
     }
 
-    private function findTransition(StateNode $node, string $event): Path
+    public function initial(): State
     {
-        do {
-            $target = $node->on[$event] ?? null;
-            if ($target) {
-                return Path::fromStateNode($node)->append($target);
-            }
-
-            $node = $node->parent;
-        } while ($node->parent);
-
-        throw new \RuntimeException("Transition not found for event: $event");
+        return State::fromValue($this->initial);
     }
 }

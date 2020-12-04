@@ -13,24 +13,20 @@ final class InterpreterTest extends TestCase
     /** @test */
     public function simple(): void
     {
-        $toggleMachine = machine(Toggle::DEFINITION);
-        $toggleService = interpret($toggleMachine)->start();
+        $toggleService = interpret(Toggle::machine())->start();
 
-        $this->assertSame('active', $toggleService->send('TOGGLE')->value);
-        $this->assertSame('inactive', $toggleService->send('TOGGLE')->value);
+        $this->assertSame('active', $toggleService->send('TOGGLE')->stateValue());
+        $this->assertSame('inactive', $toggleService->send('TOGGLE')->stateValue());
     }
 
     /** @test */
     public function nested(): void
     {
-        $lightMachine = machine(TrafficLight::DEFINITION);
-        $lightService = interpret($lightMachine)->start();
+        $lightService = interpret(TrafficLight::machine())->start();
 
-        $this->assertSame('yellow', $lightService->send('TIMER')->value);
-        $this->assertSame('red.walk', $lightService->send('TIMER')->value);
-        $this->assertSame('red.wait', $lightService->send('PED_TIMER')->value);
-        $this->assertSame('green', $lightService->send('TIMER')->value);
+        $this->assertSame('yellow', $lightService->send('TIMER')->stateValue());
+        $this->assertSame(['red' => 'walk'], $lightService->send('TIMER')->stateValue());
+        $this->assertSame(['red' => 'wait'], $lightService->send('PED_TIMER')->stateValue());
+        $this->assertSame('green', $lightService->send('TIMER')->stateValue());
     }
-}
-{
 }

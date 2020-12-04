@@ -6,34 +6,43 @@ namespace PState;
 
 final class Interpreter
 {
-    /**
-     * @var string|null
-     * @psalm-readonly-allow-private-mutation
-     */
-    public ?string $value;
+    private ?State $state;
 
     public function __construct(
         private Machine $machine
     )
     {
-        $this->value = null;
     }
 
     public function start(): self
     {
-        $this->value = $this->machine->initial;
+        $this->state = $this->machine->initial();
 
         return $this;
     }
 
     public function send(string $event): self
     {
-        if ( ! $this->value) {
+        if ( ! $this->state) {
             throw new \RuntimeException('Interpreter not started');
         }
 
-        $this->value = $this->machine->transition($this->value, $event);
+        $this->state = $this->machine->transition($this->state, $event);
 
         return $this;
+    }
+
+    public function state(): State
+    {
+        if ( ! $this->state) {
+            throw new \RuntimeException('Interpreter not started');
+        }
+
+        return $this->state;
+    }
+
+    public function stateValue(): string|array
+    {
+        return $this->state()->value();
     }
 }

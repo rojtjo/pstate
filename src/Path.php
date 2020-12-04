@@ -9,61 +9,81 @@ namespace PState;
  */
 final class Path
 {
-    private const STRING_SEPARATOR = '.';
-
-    private function __construct(
+    /**
+     * @param array $path
+     */
+    public function __construct(
         private array $path,
     )
     {
     }
 
-    public static function fromString(string $path): self
+    /**
+     * @param string $id
+     * @return self
+     */
+    public static function fromString(string $id): self
     {
-        return new self(
-            explode(self::STRING_SEPARATOR, $path)
-        );
+        return new self(explode('.', $id));
     }
 
-    public static function fromStateNode(?StateNode $node): self
+    /**
+     * @param array $path
+     * @return self
+     */
+    public static function fromArray(array $path): self
     {
-        if ($node === null) {
-             return new self([]);
-        }
-
-        $ancestors = [];
-        while ($node = $node->parent) {
-            $ancestors[] = $node;
-        }
-
-        $path = collect($ancestors)
-            ->reject(fn (StateNode $node) => $node->isMachine())
-            ->map(fn (StateNode $node) => $node->id)
-            ->reverse()
-            ->toArray();
-
         return new self($path);
     }
 
-    public static function fromRoot(): self
+    /**
+     * @param string $path
+     * @return static
+     */
+    public static function fromRoot(string $path): self
     {
-        return new self([]);
+        return new self([$path]);
     }
 
-    public function append(string $append): self
+    /**
+     * @param string $id
+     * @return $this
+     */
+    public function concat(string $id): self
     {
-        return new self([
-            ...$this->path,
-            $append,
-        ]);
+        return new self([...$this->path, $id]);
     }
 
+    /**
+     * @return array
+     */
     public function toArray(): array
     {
         return $this->path;
     }
 
-    public function toString(): string
+    /**
+     * @return string
+     */
+    public function root(): string
     {
-        return implode(self::STRING_SEPARATOR, $this->path);
+        return $this->path[0];
+    }
+
+    /**
+     * @return string|array
+     */
+    public function toValue(): string|array
+    {
+        if (count($this->path) === 1) {
+            return $this->path[0];
+        }
+
+        $value = null;
+        foreach (array_reverse($this->path) as $part) {
+            $value = $value ? [$part => $value] : $part;
+        }
+
+        return $value;
     }
 }

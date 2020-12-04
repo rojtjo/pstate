@@ -9,9 +9,23 @@ namespace PState;
  */
 final class Transition
 {
-    public function __construct(
+    /**
+     * @var string
+     */
+    public string $event;
 
-    )
+    /**
+     * @var Path
+     */
+    public Path $target;
+
+    /**
+     * @param TransitionConfig $config
+     * @param Path|null $parent
+     */
+    public function __construct(TransitionConfig $config, Path $parent = null)
     {
+        $this->event = $config->event;
+        $this->target = $parent?->concat($config->target) ?? Path::fromRoot($config->target);
     }
 }

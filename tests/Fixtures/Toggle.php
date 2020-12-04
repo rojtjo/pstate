@@ -4,22 +4,17 @@ declare(strict_types=1);
 
 namespace PState\Fixtures;
 
-use PState\Machine;
-use function PState\machine;
-
-final class Toggle
+final class Toggle extends MachineFixture
 {
-    public const DEFINITION = [
-        'id' => 'toggle',
-        'initial' => 'inactive',
-        'states' => [
-            'inactive' => ['on' => ['TOGGLE' => 'active']],
-            'active' => ['on' => ['TOGGLE' => 'inactive']],
-        ],
-    ];
-
-    public static function machine(): Machine
+    public static function definition(): array
     {
-        return machine(self::DEFINITION);
+        return [
+            'id' => 'toggle',
+            'initial' => 'inactive',
+            'states' => [
+                'inactive' => ['on' => ['TOGGLE' => 'active']],
+                'active' => ['on' => ['TOGGLE' => 'inactive']],
+            ],
+        ];
     }
 }

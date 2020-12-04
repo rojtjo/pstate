@@ -10,23 +10,41 @@ use PState\Fixtures\TrafficLight;
 
 final class MachineTest extends TestCase
 {
-    /** @test */
-    public function simple(): void
+    /**
+     * @test
+     * @doesNotPerformAssertions
+     */
+    public function create_new_machine_from_config(): void
     {
-        $toggleMachine = machine(Toggle::DEFINITION);
+        $config = Toggle::config();
 
-        $this->assertSame('active', $toggleMachine->transition('inactive', 'TOGGLE'));
-        $this->assertSame('inactive', $toggleMachine->transition('active', 'TOGGLE'));
+        new Machine($config);
     }
 
     /** @test */
-    public function nested(): void
+    public function transition(): void
     {
-        $lightMachine = machine(TrafficLight::DEFINITION);
+        $config = Toggle::config();
 
-        $this->assertSame('yellow', $lightMachine->transition('green', 'TIMER'));
-        $this->assertSame('red.walk', $lightMachine->transition('yellow', 'TIMER'));
-        $this->assertSame('red.wait', $lightMachine->transition('red.walk', 'PED_TIMER'));
-        $this->assertSame('green', $lightMachine->transition('red.wait', 'TIMER'));
+        $machine = new Machine($config);
+
+        $this->assertSame('active', $machine->transition(State::fromValue('inactive'), 'TOGGLE')->value());
+        $this->assertSame('inactive', $machine->transition(State::fromValue('active'), 'TOGGLE')->value());
+    }
+
+    /** @test */
+    public function transition_nested(): void
+    {
+        $config = TrafficLight::config();
+
+        $machine = new Machine($config);
+
+        $this->assertSame(['red' => 'walk'], $machine->transition(State::fromValue('yellow'), 'TIMER')->value());
+        $this->assertSame(['red' => 'wait'], $machine->transition(State::fromValue(['red' => 'walk']), 'PED_TIMER')->value());
+
+        $this->assertSame('yellow', $machine->transition(State::fromValue('green'), 'TIMER')->value());
+        $this->assertSame(['red' => 'walk'], $machine->transition(State::fromValue('yellow'), 'TIMER')->value());
+        $this->assertSame(['red' => 'wait'], $machine->transition(State::fromValue(['red' => 'walk']), 'PED_TIMER')->value());
+        $this->assertSame('green', $machine->transition(State::fromValue(['red' => 'wait']), 'TIMER')->value());
     }
 }
