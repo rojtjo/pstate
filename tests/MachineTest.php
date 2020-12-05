@@ -21,30 +21,55 @@ final class MachineTest extends TestCase
         new Machine($config);
     }
 
-    /** @test */
-    public function transition(): void
+    /**
+     * @test
+     * @dataProvider transitionDataProvider
+     * @param string $expected
+     * @param string $value
+     * @param string $event
+     */
+    public function transition(string $expected, string $value, string $event): void
     {
-        $config = Toggle::config();
+        $machine = new Machine(Toggle::config());
+        $initialState = State::fromValue($value);
 
-        $machine = new Machine($config);
+        $newState = $machine->transition($initialState, $event);
 
-        $this->assertSame('active', $machine->transition(State::fromValue('inactive'), 'TOGGLE')->value());
-        $this->assertSame('inactive', $machine->transition(State::fromValue('active'), 'TOGGLE')->value());
+        $this->assertSame($expected, $newState->value());
     }
 
-    /** @test */
-    public function transition_nested(): void
+    public function transitionDataProvider(): array
     {
-        $config = TrafficLight::config();
+        return [
+            'inactive to active' => ['active', 'inactive', 'TOGGLE'],
+            'active to inactive' => ['inactive', 'active', 'TOGGLE'],
+        ];
+    }
 
-        $machine = new Machine($config);
+    /**
+     * @test
+     * @dataProvider transitionNestedDataProvider
+     * @param string|array $expected
+     * @param string|array $value
+     * @param string $event
+     */
+    public function transition_nested(string|array $expected, string|array $value, string $event): void
+    {
+        $machine = new Machine(TrafficLight::config());
 
-        $this->assertSame(['red' => 'walk'], $machine->transition(State::fromValue('yellow'), 'TIMER')->value());
-        $this->assertSame(['red' => 'wait'], $machine->transition(State::fromValue(['red' => 'walk']), 'PED_TIMER')->value());
+        $initialState = State::fromValue($value);
 
-        $this->assertSame('yellow', $machine->transition(State::fromValue('green'), 'TIMER')->value());
-        $this->assertSame(['red' => 'walk'], $machine->transition(State::fromValue('yellow'), 'TIMER')->value());
-        $this->assertSame(['red' => 'wait'], $machine->transition(State::fromValue(['red' => 'walk']), 'PED_TIMER')->value());
-        $this->assertSame('green', $machine->transition(State::fromValue(['red' => 'wait']), 'TIMER')->value());
+        $newState = $machine->transition($initialState, $event);
+
+        $this->assertSame($expected, $newState->value());
+    }
+
+    public function transitionNestedDataProvider(): array
+    {
+        return [
+            'transition from toplevel state to nested state' => [['red' => 'walk'], 'yellow', 'TIMER'],
+            'transition from nested state to nested state' => [['red' => 'wait'], ['red' => 'walk'], 'PED_TIMER'],
+            'transition from nested state to toplevel state' => ['green', ['red' => 'wait'], 'TIMER'],
+        ];
     }
 }
